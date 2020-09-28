@@ -81,3 +81,7 @@ def one_hot_encoder(single_cat_dataframe):
 		single_cat_dataframe = pd.concat([single_cat_dataframe, encoded_dataframe], axis=1)
 		single_cat_dataframe.drop(column, axis=1, inplace=True)
 	return single_cat_dataframe
+
+# to do: use mask to drop 'null' from original column, and use drop to remove 'null' columns from encoded_dataframe
+# 		and ensure drops from original dataframe are correct (should it be dropping from the encoded? double check
+#		output for duplicates
