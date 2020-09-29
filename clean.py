@@ -37,51 +37,67 @@ def group_cols_by_type(dataframe, delimiters, open_text_cols):
 	cat_cols = list(s[s].index)
 	n = (dataframe.dtypes == 'number')
 	num_cols = list(n[n].index)
-	multi_cat_dataframe = dataframe[[col for col in cat_cols for d in delimiters if
-									 (dataframe[col].str.contains(d).any() and col not in open_text_cols)]].copy()
-	single_cat_dataframe = dataframe[
-		[col for col in cat_cols if col not in multi_cat_dataframe.columns and col not in open_text_cols]].copy()
-	num_cat_dataframe = dataframe[num_cols]
-	open_text_dataframe = dataframe[open_text_cols]
-	return multi_cat_dataframe, single_cat_dataframe, num_cat_dataframe, open_text_dataframe
+	multi_cat_cols = [col for col in cat_cols for d in delimiters if
+					  (dataframe[col].str.contains(d).any() and col not in open_text_cols)]
+	single_cat_cols = [col for col in cat_cols if col not in multi_cat_cols and col not in open_text_cols]
+	return multi_cat_cols, single_cat_cols, num_cols, open_text_cols
 
 
 def multi_cat_encoder(multi_cat_dataframe, delimiters):
 	from sklearn.preprocessing import MultiLabelBinarizer
 	import pandas as pd
+	import numpy as np
 	mlb = MultiLabelBinarizer()
-	multi_cat_dataframe.fillna('null', inplace=True)  # temporarily replace nans with 'Null' to allow for encoding
-	for column in multi_cat_dataframe:
-		for d in delimiters:
-			split = multi_cat_dataframe[column].str.split(d)
+	working_dataframe = multi_cat_dataframe.fillna('null')  # temporarily replace nans with 'Null' to allow for
+	# encoding
+	final_data = np.array(np.arange(len(working_dataframe))).reshape(-1, 1)
+	final_columns = ['index']
+	for d in delimiters:
+		for column in working_dataframe:
+			split = working_dataframe[column].str.split(d)
 			group_responses(split)
 			data = mlb.fit_transform(split)
-			encoded_dataframe = pd.DataFrame(data, columns=[f'{column}: {a}' for a in mlb.classes_])
-			encoded_dataframe.index = multi_cat_dataframe.index
-			#encoded_dataframe.mask(multi_cat_dataframe[column] == 'null', inplace=True)
-			encoded_dataframe.drop([col for col in encoded_dataframe.columns if 'null' in str(col)], inplace=True,
-								   axis=1)
-			multi_cat_dataframe = pd.concat([multi_cat_dataframe, encoded_dataframe], axis=1)
-			multi_cat_dataframe.drop(column, axis=1, inplace=True)
-	return multi_cat_dataframe
+			encoded_columns = [f'{column}: {a}' for a in mlb.classes_]
+			mask = working_dataframe[column] != 'null'
+			encoded_data = [row if m else [np.nan] * len(row) for row, m in zip(data, mask)]
+			try:
+				null_index = list(mlb.classes_).index('null')
+				encoded_data = np.delete(encoded_data, null_index, axis=1)
+				del encoded_columns[null_index]
+			except ValueError:
+				pass
+			final_data = np.append(final_data, encoded_data, axis=1)
+			final_columns = np.append(final_columns, encoded_columns)
+	final_dataframe = pd.DataFrame(data=final_data, columns=final_columns)
+	return final_dataframe
 
 
 def one_hot_encoder(single_cat_dataframe):
 	from sklearn.preprocessing import OneHotEncoder
 	import pandas as pd
+	import numpy as np
 	oh = OneHotEncoder(handle_unknown='ignore', sparse=False)
-	single_cat_dataframe.fillna('null', inplace=True)
-	for column in single_cat_dataframe:
-		group_responses(single_cat_dataframe[column])
-		data = oh.fit_transform(single_cat_dataframe[column].values.reshape(-1, 1)).astype(int)
-		encoded_dataframe = pd.DataFrame(data, columns=[f'{column}: {a}' for a in oh.categories_[0]])
-		encoded_dataframe.index = single_cat_dataframe.index
-		#encoded_dataframe.mask(single_cat_dataframe[column] == 'null', inplace=True)
-		encoded_dataframe.drop([col for col in encoded_dataframe.columns if 'null' in str(col)], inplace=True, axis=1)
-		single_cat_dataframe = pd.concat([single_cat_dataframe, encoded_dataframe], axis=1)
-		single_cat_dataframe.drop(column, axis=1, inplace=True)
-	return single_cat_dataframe
+	working_dataframe = single_cat_dataframe.fillna('null')
+	final_data = np.array(np.arange(len(working_dataframe))).reshape(-1, 1)
+	final_columns = ['index']
+	for column in working_dataframe:
+		group_responses(working_dataframe[column])
+		data = oh.fit_transform(working_dataframe[column].values.reshape(-1, 1)).astype(int)
+		encoded_columns = [f'{column}: {a}' for a in oh.categories_[0]]
+		mask = working_dataframe[column] != 'null'
+		encoded_data = [row if m else [np.nan] * len(row) for row, m in zip(data, mask)]
+		try:
+			null_index = list(oh.categories_[0]).index('null')
+			encoded_data = np.delete(encoded_data, null_index, axis=1)
+			del encoded_columns[null_index]
+		except ValueError:
+			pass
+		final_data = np.append(final_data, encoded_data, axis=1)
+		final_columns = np.append(final_columns, encoded_columns)
+	final_dataframe = pd.DataFrame(data=final_data, columns=final_columns)
+	return final_dataframe
 
-# to do: use mask to drop 'null' from original column, and use drop to remove 'null' columns from encoded_dataframe
-# 		and ensure drops from original dataframe are correct (should it be dropping from the encoded? double check
-#		output for duplicates
+#to do
+# any cleaning for numerical columns
+# potentially combine mlb & oh encoders into one function, or at least a mojority of them into one
+# 	with the dataframe, model, and columns (oh.categories_[0] and mlb.classes_) passed into the function

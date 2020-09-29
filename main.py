@@ -11,8 +11,7 @@ dataframe = select_dataframe('Input/survey.xlsx', columns_to_ignore)
 delimiters = ['; \n'] # user-specified
 open_text_cols = ['Q50', 'Q51', 'Q91', 'Q92', 'Q132', 'Q133', 'Q173', 'Q174'] # user-specified
 
-multi_cat_df, single_cat_df, num_cat_df, open_text_df = group_cols_by_type(dataframe, delimiters, open_text_cols)
+multi_cat_cols, single_cat_cols, num_cat_cols, open_text_cols = group_cols_by_type(dataframe, delimiters, open_text_cols)
 
-multi_cat_encoder(multi_cat_df, delimiters)
-one_hot_encoder(single_cat_df)
-
+multi_cat_encoded_df = multi_cat_encoder(dataframe[multi_cat_cols], delimiters)
+single_cat_encoded_df = one_hot_encoder(dataframe[single_cat_cols])
