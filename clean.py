@@ -3,10 +3,6 @@ def select_dataframe(file_path: str, ignore_cols):
 	import os
 	import numpy as np
 	file_extension = os.path.splitext(file_path)
-	# add
-	# columns
-	# to ignore
-	# here
 	if file_extension == 'csv':
 		dataframe = pd.read_csv(file_path)
 		dataframe.drop(ignore_cols, inplace=True, axis=1)
@@ -47,11 +43,12 @@ def multi_cat_encoder(multi_cat_dataframe, delimiters):
 	from sklearn.preprocessing import MultiLabelBinarizer
 	import pandas as pd
 	import numpy as np
-	mlb = MultiLabelBinarizer()
-	working_dataframe = multi_cat_dataframe.fillna('null')  # temporarily replace nans with 'Null' to allow for
-	# encoding
+	mlb = MultiLabelBinarizer()  # define model used to encode
+	working_dataframe = multi_cat_dataframe.fillna('null')  # temporarily replace NA with 'null' as needed for encoding
+	# initialize array & list for later appending
 	final_data = np.array(np.arange(len(working_dataframe))).reshape(-1, 1)
 	final_columns = ['index']
+	# iterate through columns, encoding data and collecting column names, and ensuring missing values are accounted for
 	for d in delimiters:
 		for column in working_dataframe:
 			split = working_dataframe[column].str.split(d)
@@ -60,44 +57,46 @@ def multi_cat_encoder(multi_cat_dataframe, delimiters):
 			encoded_columns = [f'{column}: {a}' for a in mlb.classes_]
 			mask = working_dataframe[column] != 'null'
 			encoded_data = [row if m else [np.nan] * len(row) for row, m in zip(data, mask)]
+			# undo insertion of 'null' placeholders to keep missing values that are intentionally blank
 			try:
 				null_index = list(mlb.classes_).index('null')
 				encoded_data = np.delete(encoded_data, null_index, axis=1)
 				del encoded_columns[null_index]
 			except ValueError:
 				pass
+			# append newly encoded data to pre-existing arrays
 			final_data = np.append(final_data, encoded_data, axis=1)
 			final_columns = np.append(final_columns, encoded_columns)
-	final_dataframe = pd.DataFrame(data=final_data, columns=final_columns)
-	return final_dataframe
+	# return all encoded data in a single dataframe
+	return pd.DataFrame(data=final_data, columns=final_columns)
 
 
 def one_hot_encoder(single_cat_dataframe):
 	from sklearn.preprocessing import OneHotEncoder
 	import pandas as pd
 	import numpy as np
-	oh = OneHotEncoder(handle_unknown='ignore', sparse=False)
-	working_dataframe = single_cat_dataframe.fillna('null')
+	oh = OneHotEncoder(handle_unknown='ignore', sparse=False)  # define model used to encode
+	working_dataframe = single_cat_dataframe.fillna('null')  # temporarily replace NA with 'null' as needed for
+	# encoding
+	# initialize array & list for later appending
 	final_data = np.array(np.arange(len(working_dataframe))).reshape(-1, 1)
 	final_columns = ['index']
+	# iterate through columns, encoding data and collecting column names, and ensuring missing values are accounted for
 	for column in working_dataframe:
 		group_responses(working_dataframe[column])
 		data = oh.fit_transform(working_dataframe[column].values.reshape(-1, 1)).astype(int)
 		encoded_columns = [f'{column}: {a}' for a in oh.categories_[0]]
 		mask = working_dataframe[column] != 'null'
 		encoded_data = [row if m else [np.nan] * len(row) for row, m in zip(data, mask)]
+		# undo insertion of 'null' placeholders to keep missing values that are intentionally blank
 		try:
 			null_index = list(oh.categories_[0]).index('null')
 			encoded_data = np.delete(encoded_data, null_index, axis=1)
 			del encoded_columns[null_index]
 		except ValueError:
 			pass
+		# append newly encoded data to pre-existing arrays
 		final_data = np.append(final_data, encoded_data, axis=1)
 		final_columns = np.append(final_columns, encoded_columns)
-	final_dataframe = pd.DataFrame(data=final_data, columns=final_columns)
-	return final_dataframe
-
-#to do
-# any cleaning for numerical columns
-# potentially combine mlb & oh encoders into one function, or at least a mojority of them into one
-# 	with the dataframe, model, and columns (oh.categories_[0] and mlb.classes_) passed into the function
+	# return all encoded data in a single dataframe
+	return pd.DataFrame(data=final_data, columns=final_columns)

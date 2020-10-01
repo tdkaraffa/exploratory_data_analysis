@@ -15,3 +15,5 @@ multi_cat_cols, single_cat_cols, num_cat_cols, open_text_cols = group_cols_by_ty
 
 multi_cat_encoded_df = multi_cat_encoder(dataframe[multi_cat_cols], delimiters)
 single_cat_encoded_df = one_hot_encoder(dataframe[single_cat_cols])
+num_cat_df = dataframe[num_cat_cols].copy()
+open_text_df = dataframe[open_text_cols]
