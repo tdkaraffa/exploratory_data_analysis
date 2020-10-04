@@ -30,7 +30,8 @@ def group_responses(series, words_to_combine_on):  # user-specified
 
 def choose_demographics(dataframe, demographics):
 	demos = dataframe[demographics].copy()
-	demos['Overall'] = 'Overall'
+	demos.insert(0, 'Overall', ['Overall']*len(demos))
+	demos.set_index(dataframe.index, inplace=True)
 	return demos
 
 def group_cols_by_type(dataframe, delimiters, open_text_cols):
@@ -42,8 +43,7 @@ def group_cols_by_type(dataframe, delimiters, open_text_cols):
 	return multi_cat_cols, single_cat_cols, number_columns, open_text_cols
 
 
-def cat_encoder(cat_dataframe, model, model_label_term, d=None, combine=None):  # combines the above two
-	# functions into one
+def cat_encoder(cat_dataframe, model, model_label_term, delimiters=None, combine=None):
 	# cat_data_frame: section of main dataframe to encode
 	# model: predetermined sklearn model
 	# model_label_term: model-specific parameter to obtain encoded labels
@@ -57,8 +57,8 @@ def cat_encoder(cat_dataframe, model, model_label_term, d=None, combine=None):  
 	final_columns = ['index']
 	# iterate through columns, encoding data and collecting column names, and ensuring missing values are accounted for
 	for column in working_dataframe:
-		if d:  # only execute this loop if delimiters are specified, only for multi-cat
-			for d in d:
+		if delimiters:  # only execute this loop if delimiters are specified, only for multi-cat
+			for d in delimiters:
 				split = working_dataframe[column].str.split(d)
 		else:  # otherwise, reshape data for model
 			split = working_dataframe[column].values.reshape(-1, 1)
