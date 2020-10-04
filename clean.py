@@ -27,15 +27,19 @@ def group_responses(series, words_to_combine_on):  # user-specified
 					row = word
 
 
+
+def choose_demographics(dataframe, demographics):
+	demos = dataframe[demographics].copy()
+	demos['Overall'] = 'Overall'
+	return demos
+
 def group_cols_by_type(dataframe, delimiters, open_text_cols):
-	s = (dataframe.dtypes == 'object')
-	cat_cols = list(s[s].index)
-	n = (dataframe.dtypes == 'number')
-	num_cols = list(n[n].index)
-	multi_cat_cols = [col for col in cat_cols for d in delimiters if
+	object_columns = list(dataframe.select_dtypes(exclude='number'))
+	number_columns = list(dataframe.select_dtypes(include='number'))
+	multi_cat_cols = [col for col in object_columns for d in delimiters if
 					  (dataframe[col].str.contains(d).any() and col not in open_text_cols)]
-	single_cat_cols = [col for col in cat_cols if col not in multi_cat_cols and col not in open_text_cols]
-	return multi_cat_cols, single_cat_cols, num_cols, open_text_cols
+	single_cat_cols = [col for col in object_columns if col not in multi_cat_cols and col not in open_text_cols]
+	return multi_cat_cols, single_cat_cols, number_columns, open_text_cols
 
 
 def cat_encoder(cat_dataframe, model, model_label_term, d=None, combine=None):  # combines the above two
@@ -78,4 +82,4 @@ def cat_encoder(cat_dataframe, model, model_label_term, d=None, combine=None):  
 		final_data = np.append(final_data, encoded_data, axis=1)
 		final_columns = np.append(final_columns, encoded_columns)
 	# return all encoded data in a single dataframe
-	return pd.DataFrame(data=final_data, columns=final_columns)
+	return pd.DataFrame(data=final_data, columns=final_columns).set_index('index')
