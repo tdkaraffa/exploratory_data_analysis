@@ -1,5 +1,7 @@
 def main():
 	from clean import select_dataframe, choose_demographics, group_cols_by_type, cat_encoder
+	from visualizations import visualize
+	import pandas as pd
 	from sklearn.preprocessing import OneHotEncoder
 	from sklearn.preprocessing import MultiLabelBinarizer
 
@@ -29,23 +31,17 @@ def main():
 										combine=words_to_combine_on)
 	num_cat_df = dataframe[num_cat_cols].copy()
 	open_text_df = dataframe[open_text_cols]
-	import pandas as pd
 	full_dataframe = pd.concat([multi_cat_encoded_df, single_cat_encoded_df, num_cat_df])
 
-	# ---------------------------------------------------------------------------#
+	visualize(multi_cat_encoded_df, demographics_df)
+	visualize(single_cat_encoded_df, demographics_df)
+
 	import pickle
 	pickle.dump(full_dataframe, open("full_data.p", "wb"))
 	pickle.dump(multi_cat_encoded_df, open("multi_cat_data.p", "wb"))
 	pickle.dump(single_cat_encoded_df, open("single_cat_data.p", "wb"))
 	pickle.dump(num_cat_df, open("num_data.p", "wb"))
 	pickle.dump(demographics_df, open("demos_data.p", "wb"))
-
-
-# ---------------------------------------------------------------------------#
-
-# to do
-# cleanup for numerical data (will need to make dummy data)
-# visualizations
 
 if __name__ == "__main__":
 	main()
